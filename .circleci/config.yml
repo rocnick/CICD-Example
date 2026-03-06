@@ -1,0 +1,42 @@
+# CircleCI 2.1 — Go application with workspace sharing
+version: 2.1
+
+orbs:                                  # 1. Orbs = reusable package registry (like Actions Marketplace)
+  go: circleci/go@1.11
+
+jobs:
+  build-and-test:
+    executor:
+      name: go/default
+      tag: '1.22'
+
+    steps:
+      - checkout
+      - go/load-cache: {}               # 2. Orb-provided step
+      - run:
+          name: Download modules
+          command: go mod download
+      - go/save-cache: {}
+      - run:
+          name: Test
+          command: go test -v ./...
+      - persist_to_workspace:            # 3. Like Bitbucket artifacts, but for jobs
+          root: .
+          paths: [.]
+
+  deploy:
+    machine: true                       # 4. Full VM instead of Docker container
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run: ./scripts/deploy.sh
+
+workflows:
+  ci-cd:
+    jobs:
+      - build-and-test
+      - deploy:
+          requires: [build-and-test]    # 5. Job dependency graph
+          filters:
+            branches:
+              only: main
