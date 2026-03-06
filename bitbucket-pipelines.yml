@@ -1,0 +1,33 @@
+# Runs on every push to any branch
+image: node:20                        # 1. Docker image for all steps
+
+definitions:
+  caches:
+    node: node_modules                # 2. Cache node_modules between runs
+
+pipelines:
+  default:                             # Runs on every branch push
+    - step:
+        name: Install & Test
+        caches:
+          - node
+        script:
+          - npm ci                        # 3. Clean install (faster than npm install)
+          - npm run lint
+          - npm test
+        artifacts:                       # 4. Pass files to next step
+          - coverage/**
+
+  branches:
+    main:                              # Only runs on pushes to main
+      - step:
+          name: Install & Test
+          caches: [node]
+          script:
+            - npm ci
+            - npm test
+      - step:
+          name: Build
+          script:
+            - npm run build
+            - echo "Build complete on $(date)"
